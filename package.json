@@ -1,0 +1,12 @@
+{
+  "name": "clubos-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ClubOS - build/start orquestado para deploy en un solo servicio (Railway/Render). Ver DEPLOY.md.",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "build": "npm run install:all && npm run build --prefix frontend && npm run build --prefix backend",
+    "start": "npm run start --prefix backend",
+    "seed": "npm run seed --prefix backend"
+  }
+}
