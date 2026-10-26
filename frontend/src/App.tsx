@@ -1,7 +1,7 @@
 import React from "react";
 import { Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { canRead } from "./permissions";
+import { canRead, canWrite } from "./permissions";
 import { ModuleKey } from "./api";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -13,6 +13,8 @@ import DataAnalyst from "./pages/DataAnalyst";
 import FisicoMedico from "./pages/FisicoMedico";
 import FichaJugador from "./pages/FichaJugador";
 import Usuarios from "./pages/Usuarios";
+import Fuentes from "./pages/Fuentes";
+import Importar from "./pages/Importar";
 
 const NAV_ITEMS: { to: string; label: string; module?: ModuleKey }[] = [
   { to: "/plantilla", label: "Gestion", module: "gestion" },
@@ -43,6 +45,16 @@ function Layout({ children }: { children: React.ReactNode }) {
               {item.label}
             </NavLink>
           ))}
+          {(canRead(user, "data") || canRead(user, "scouting")) && (
+            <NavLink to="/fuentes" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
+              Fuentes
+            </NavLink>
+          )}
+          {(canWrite(user, "gestion") || canWrite(user, "data") || canWrite(user, "fisico_medico")) && (
+            <NavLink to="/importar" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
+              Importar
+            </NavLink>
+          )}
           {user?.role === "ADMIN" && (
             <NavLink to="/usuarios" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
               Usuarios
@@ -79,6 +91,22 @@ function ProtectedRoute({ children, module }: { children: React.ReactNode; modul
   // (ver requireModule en el backend); esto es solo para no mostrarle una
   // pantalla vacia o rota.
   if (module && !canRead(user, module)) return <Navigate to="/" replace />;
+  return <Layout>{children}</Layout>;
+}
+
+// Fuentes externas: las usan Data (cuerpo tecnico) y Scouting.
+function ExternalDataRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!canRead(user, "data") && !canRead(user, "scouting")) return <Navigate to="/" replace />;
+  return <Layout>{children}</Layout>;
+}
+
+// Importar planillas: hace falta poder cargar en al menos un sector con planilla.
+function ImportRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!canWrite(user, "gestion") && !canWrite(user, "data") && !canWrite(user, "fisico_medico")) return <Navigate to="/" replace />;
   return <Layout>{children}</Layout>;
 }
 
@@ -147,6 +175,22 @@ export default function App() {
           <ProtectedRoute module="fisico_medico">
             <FisicoMedico />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/fuentes"
+        element={
+          <ExternalDataRoute>
+            <Fuentes />
+          </ExternalDataRoute>
+        }
+      />
+      <Route
+        path="/importar"
+        element={
+          <ImportRoute>
+            <Importar />
+          </ImportRoute>
         }
       />
       <Route

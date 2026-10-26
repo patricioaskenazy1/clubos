@@ -5,8 +5,8 @@ import { useAuth } from "../AuthContext";
 export default function Login() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@clubos.demo");
-  const [password, setPassword] = useState("clubos2026");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -43,11 +43,6 @@ export default function Login() {
         <button className="btn btn-primary" type="submit" disabled={loading}>
           {loading ? "Ingresando..." : "Ingresar"}
         </button>
-        <p className="hint-text">
-          Demo, contrasena clubos2026 para todos: admin@clubos.demo (acceso total) ·{" "}
-          dirigencia@clubos.demo (gestion) · tecnico@clubos.demo (entrenamientos + data) ·{" "}
-          fisico@clubos.demo (fisico-medico) · scout@clubos.demo (scouting + video)
-        </p>
       </form>
     </div>
   );

@@ -14,12 +14,16 @@ import { statsRouter } from "./routes/stats";
 import { medicalRecordsRouter, physicalTestsRouter } from "./routes/medical";
 import { usersRouter } from "./routes/users";
 import { dashboardRouter } from "./routes/dashboard";
+import { externalRouter } from "./routes/external";
+import { importsRouter } from "./routes/imports";
+import { failStaleRuns } from "./ingest/store";
 
 migrate();
+failStaleRuns();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, service: "clubos-backend" }));
 
@@ -33,6 +37,8 @@ app.use("/api/medical-records", medicalRecordsRouter);
 app.use("/api/physical-tests", physicalTestsRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/external", externalRouter);
+app.use("/api/imports", importsRouter);
 
 // En produccion (Railway/Render), un solo servicio sirve todo: esta misma
 // API y el build estatico del frontend (frontend/dist), para no tener que

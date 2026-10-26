@@ -206,6 +206,83 @@ export interface VideoDetail extends Video {
   tags: VideoTag[];
 }
 
+// ---------- Datos externos e importacion de planillas ----------
+
+export interface ExtSource {
+  key: string;
+  label: string;
+  attribution: string;
+  configured: boolean;
+  coverage: string;
+}
+
+export interface ExtCompetition {
+  id: string;
+  source: string;
+  externalId: string;
+  name: string;
+  season: string;
+  country: string | null;
+  matchCount?: number;
+}
+
+export interface ExtCatalogEntry {
+  externalId: string;
+  name: string;
+  season: string;
+  country: string;
+}
+
+export interface ExtMatch {
+  id: string;
+  date: string | null;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  stage: string | null;
+  detailLevel: "BASIC" | "EVENTS" | string;
+}
+
+export interface ExtPlayerRank {
+  playerExternalId: string;
+  playerName: string;
+  teamName: string;
+  matches: number;
+  minutes: number;
+  goals: number;
+  assists: number;
+  shots: number;
+  xg: number;
+}
+
+export interface ImportRun {
+  id: string;
+  source: string;
+  scope: string;
+  status: "RUNNING" | "DONE" | "ERROR";
+  itemsDone: number;
+  itemsTotal: number | null;
+  message: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+export interface CsvEntity {
+  key: string;
+  label: string;
+  columns: string[];
+}
+
+export interface CsvImportResult {
+  total: number;
+  valid: number;
+  errors: { row: number; message: string }[];
+  ignoredColumns: string[];
+  imported: number;
+  dryRun: boolean;
+}
+
 const TOKEN_KEY = "clubos_token";
 const USER_KEY = "clubos_user";
 
@@ -245,6 +322,14 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`/api${path}`, { ...options, headers });
+  // Sesion vencida o invalida (por ejemplo, tras un redeploy o pasadas las
+  // horas de vigencia del token): se limpia y se manda al login, en vez de
+  // dejar la pantalla con un mensaje de error.
+  if (res.status === 401 && token && path !== "/auth/login") {
+    clearSession();
+    window.location.href = "/login";
+    throw new ApiError("Tu sesion vencio, volve a ingresar", 401);
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     throw new ApiError(body.error || "Error de red", res.status);
@@ -327,6 +412,36 @@ export const api = {
 
   createPhysicalTest: (data: { playerId: string; date: string; testType: string; value: number; unit: string; notes?: string }) =>
     apiFetch<PhysicalTest>("/physical-tests", { method: "POST", body: JSON.stringify(data) }),
+
+  listExtSources: () => apiFetch<ExtSource[]>("/external/sources"),
+
+  listExtCompetitions: () => apiFetch<ExtCompetition[]>("/external/competitions"),
+
+  listExtMatches: (competitionId: string) => apiFetch<ExtMatch[]>(`/external/competitions/${competitionId}/matches`),
+
+  listExtPlayers: (competitionId: string) => apiFetch<ExtPlayerRank[]>(`/external/competitions/${competitionId}/players`),
+
+  extCatalog: (source: string) => apiFetch<ExtCatalogEntry[]>(`/external/catalog/${source}`),
+
+  extImport: (data: { source: string; externalId: string; maxMatches?: number }) =>
+    apiFetch<{ runId: string }>("/external/import", { method: "POST", body: JSON.stringify(data) }),
+
+  listImportRuns: () => apiFetch<ImportRun[]>("/external/runs"),
+
+  promoteExtPlayer: (data: { playerName: string; teamName?: string; position?: string; competition?: string }) =>
+    apiFetch<Player>("/external/promote", { method: "POST", body: JSON.stringify(data) }),
+
+  listCsvEntities: () => apiFetch<CsvEntity[]>("/imports"),
+
+  csvTemplate: async (entity: string): Promise<Blob> => {
+    const token = getStoredToken();
+    const res = await fetch(`/api/imports/${entity}/template`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) throw new ApiError("No se pudo descargar la plantilla", res.status);
+    return res.blob();
+  },
+
+  importCsv: (entity: string, csv: string, dryRun: boolean) =>
+    apiFetch<CsvImportResult>(`/imports/${entity}`, { method: "POST", body: JSON.stringify({ csv, dryRun }) }),
 
   listUsers: () => apiFetch<ClubUser[]>("/users"),
 

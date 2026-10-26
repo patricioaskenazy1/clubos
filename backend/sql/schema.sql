@@ -147,3 +147,83 @@ CREATE TABLE IF NOT EXISTS physical_tests (
   createdById TEXT NOT NULL REFERENCES users(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Datos externos (fase de ingesta). Todo lo que entra desde una plataforma
+-- de afuera vive en tablas ext_* separadas de los datos propios del club
+-- (players, player_stats, etc.), y cada fila guarda de que fuente vino
+-- (source + externalId). Asi se puede reimportar sin duplicar, saber la
+-- licencia/atribucion de cada dato y, si un proveedor cambia o corta el
+-- acceso, quitar solo esa fuente sin tocar la informacion del club.
+CREATE TABLE IF NOT EXISTS ext_competitions (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL,      -- statsbomb-open | api-football
+  externalId TEXT NOT NULL,
+  name TEXT NOT NULL,
+  season TEXT NOT NULL,
+  country TEXT,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(source, externalId)
+);
+
+CREATE TABLE IF NOT EXISTS ext_matches (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  externalId TEXT NOT NULL,
+  competitionId TEXT NOT NULL REFERENCES ext_competitions(id),
+  date TEXT,
+  homeTeam TEXT NOT NULL,
+  awayTeam TEXT NOT NULL,
+  homeScore INTEGER,
+  awayScore INTEGER,
+  stage TEXT,
+  detailLevel TEXT NOT NULL DEFAULT 'BASIC', -- BASIC (resultado) | EVENTS (con jugadores y tiros)
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(source, externalId)
+);
+
+-- Una fila por jugador y partido, calculada al importar los eventos.
+CREATE TABLE IF NOT EXISTS ext_player_matches (
+  id TEXT PRIMARY KEY,
+  matchId TEXT NOT NULL REFERENCES ext_matches(id),
+  teamName TEXT NOT NULL,
+  playerExternalId TEXT NOT NULL,
+  playerName TEXT NOT NULL,
+  position TEXT,
+  jersey INTEGER,
+  minutes INTEGER,
+  goals INTEGER NOT NULL DEFAULT 0,
+  assists INTEGER NOT NULL DEFAULT 0,
+  shots INTEGER NOT NULL DEFAULT 0,
+  xg REAL NOT NULL DEFAULT 0,
+  UNIQUE(matchId, playerExternalId)
+);
+
+-- Solo se guardan los tiros (con posicion y xG), no todos los eventos: es
+-- lo que alimenta mapas de tiros y rankings de xG sin inflar la base.
+CREATE TABLE IF NOT EXISTS ext_shots (
+  id TEXT PRIMARY KEY,
+  matchId TEXT NOT NULL REFERENCES ext_matches(id),
+  minute INTEGER,
+  teamName TEXT,
+  playerName TEXT,
+  x REAL,
+  y REAL,
+  xg REAL,
+  outcome TEXT,
+  bodyPart TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ext_shots_match ON ext_shots(matchId);
+CREATE INDEX IF NOT EXISTS idx_ext_pm_match ON ext_player_matches(matchId);
+
+CREATE TABLE IF NOT EXISTS import_runs (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  scope TEXT NOT NULL,       -- ej. "La Liga 2015/2016" o "Liga Profesional 2024"
+  status TEXT NOT NULL,      -- RUNNING | DONE | ERROR
+  itemsDone INTEGER NOT NULL DEFAULT 0,
+  itemsTotal INTEGER,
+  message TEXT,
+  startedById TEXT REFERENCES users(id),
+  startedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  finishedAt TEXT
+);

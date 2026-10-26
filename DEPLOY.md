@@ -64,6 +64,11 @@ En el servicio, pestaña **Variables**, agregá:
 | `ADMIN_PASSWORD` | una contraseña real, que después podés cambiar | tu contraseña inicial |
 | `ADMIN_NAME` | tu nombre | como te va a mostrar la plataforma |
 | `DATABASE_FILE` | `/app/data/clubos.db` | dónde vive el archivo de base de datos (ver paso 4, tiene que coincidir con el volumen) |
+| `API_FOOTBALL_KEY` | (opcional) la clave gratuita de [api-football.com](https://www.api-football.com) | habilita traer calendario y resultados de ligas desde la pantalla **Fuentes**. Sin esta variable, esa fuente aparece como "Falta clave" y el resto funciona igual |
+
+Después de agregar o cambiar variables, Railway muestra los cambios
+pendientes: hay que apretar **Apply changes** y esperar el redeploy para
+que tomen efecto.
 
 Con `ADMIN_EMAIL`/`ADMIN_PASSWORD` configurados, la plataforma crea **un
 solo usuario real** (vos, como Administrador) la primera vez que arranca --
@@ -74,12 +79,18 @@ reales.
 
 ## 4. Agregar el volumen (para que la base de datos no se borre)
 
-1. En el servicio, pestaña **Volumes** (o `⌘K` / `Ctrl+K` y buscar
-   "Volume").
-2. Creá un volumen y montalo en la ruta `/app/data`.
+En la versión actual de Railway no hay una sección "Volumes" dentro de
+Settings: el volumen se agrega desde el lienzo del proyecto.
+
+1. En el lienzo del proyecto, hacé **click derecho sobre la tarjeta del
+   servicio** y elegí **Attach volume**.
+2. Montalo en la ruta `/app/data`.
 3. Confirmá que `DATABASE_FILE` (paso 3) sea `/app/data/clubos.db` -- así el
    archivo de la base de datos queda adentro del volumen y sobrevive a cada
    reinicio o redeploy.
+
+Si el servicio se cae al arrancar con un error sobre `/app/data`, es que el
+volumen todavía no está montado: adjuntalo y redesplegá.
 
 ## 5. Generar la URL pública
 
@@ -99,6 +110,34 @@ reales.
    Dirigencia, Scout) y una contraseña inicial que le pasás vos.
 3. Empezá a cargar el plantel real desde **Gestión**. A partir de ahí, cada
    sector ve y carga solo lo suyo -- tal como lo definimos.
+
+## Si te equivocaste con el email o la contraseña del administrador
+
+El administrador inicial se crea **una sola vez**, la primera vez que la
+base de datos está vacía. Si después corregís `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+o `ADMIN_NAME`, no pasa nada: el usuario ya existe con los valores viejos.
+Mientras todavía no hayas cargado datos reales, la salida más simple es
+borrar la base y dejar que se vuelva a crear:
+
+1. Corregí las variables y aplicá los cambios.
+2. En el servicio, abrí la pestaña **Console** y escribí a mano (no pegues,
+   la consola inserta caracteres raros al pegar):
+   `rm -f /app/data/clubos.db /app/data/clubos.db-wal /app/data/clubos.db-shm`
+3. Reiniciá el servicio. Al arrancar con la base vacía, crea el
+   administrador con los valores nuevos.
+
+**Esto borra todos los datos**, así que solo sirve antes de cargar el
+plantel real.
+
+## Datos externos y planillas
+
+- **Fuentes** (menú de arriba): trae datos de plataformas gratuitas. La base
+  guarda de qué fuente vino cada dato, así se puede reimportar sin duplicar.
+  StatsBomb Open Data no necesita clave; API-Football necesita la variable
+  `API_FOOTBALL_KEY` (plan gratuito: 100 pedidos por día).
+- **Importar** (menú de arriba): sube planillas de Excel o Google Sheets
+  guardadas como CSV (plantel, estadísticas, tests físicos, partes
+  médicos). Cada rol solo puede subir las planillas de su sector.
 
 ## Actualizar la plataforma más adelante
 

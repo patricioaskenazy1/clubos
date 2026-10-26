@@ -193,12 +193,13 @@ clubos-mvp/
       middleware/    # autenticación (JWT) y control de acceso (requireModule/requireAdmin)
       permissions.ts # fuente única de verdad: qué sector lee/escribe cada rol
       bootstrap.ts   # crea el primer usuario Admin real desde variables de entorno (sin datos de ejemplo)
-      routes/        # auth, players, scouting-reports, videos, training, stats, medical-records, physical-tests, users, dashboard
+      routes/        # auth, players, scouting-reports, videos, training, stats, medical-records, physical-tests, users, dashboard, external (fuentes de datos), imports (planillas CSV)
+      ingest/        # conectores de datos externos (statsbomb, apifootball), lector CSV y almacenamiento ext_*
       index.ts       # arranque del servidor (en producción también sirve el frontend compilado)
     sql/schema.sql   # modelo de datos
   frontend/
     src/
-      pages/         # Login, Dashboard, Plantilla, DataAnalyst, Scouting, Video, Entrenamientos, FisicoMedico, FichaJugador, Usuarios
+      pages/         # Login, Dashboard, Plantilla, DataAnalyst, Scouting, Video, Entrenamientos, FisicoMedico, FichaJugador, Usuarios, Fuentes, Importar
       permissions.ts # espejo del acceso por sector, solo para mostrar/ocultar en la UI (la seguridad real está en el backend)
       api.ts         # cliente HTTP tipado
       AuthContext.tsx
